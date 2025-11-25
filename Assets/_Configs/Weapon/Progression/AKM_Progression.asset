@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 85d87cc72759e6e48b10412d614afedd, type: 3}
+  m_Name: AKM_Progression
+  m_EditorClassIdentifier: Game::Game.RangedWeaponProgression
+  baseStats:
+    damage: 30
+    maxRange: 60
+    magazineSize: 30
+    fireRate: 9
+    baseSpread: 0
+    spreadPerShot: 0.3
+    maxSpread: 2
+    spreadRecovery: 1.2
+    spreadDistanceScale: 30
+    recoilPerShot: 1
+    maxRecoil: 1
+    recoilRecovery: 6
+  levels:
+  - level: 1
+    requiredExp: 0
+    modifier:
+      damageMul: 1
+      fireRateMul: 1
+      recoilMul: 1
+      spreadMul: 1
+      bonusMagazineSize: 1

@@ -1,11 +1,19 @@
 {
   "dependencies": {
     "com.baxoai.framework": {
-      "version": "https://github.com/Hichu187/BaXoai_Framework.git",
+      "version": "file:D:/BaXoai_Framework",
+      "depth": 0,
+      "source": "local",
+      "dependencies": {}
+    },
+    "com.coffee.ui-effect": {
+      "version": "https://github.com/mob-sakai/UIEffect.git?path=Packages/src",
       "depth": 0,
       "source": "git",
-      "dependencies": {},
-      "hash": "61e0d2798c227bd1d504354cee8c0fd6c84c6af2"
+      "dependencies": {
+        "com.unity.ugui": "1.0.0"
+      },
+      "hash": "4e30651290ab5c914237f2af4e3bdbef661feb93"
     },
     "com.cysharp.unitask": {
       "version": "https://github.com/Cysharp/UniTask.git?path=src/UniTask/Assets/Plugins/UniTask",

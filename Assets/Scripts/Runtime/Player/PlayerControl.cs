@@ -1,6 +1,5 @@
 ﻿using Sirenix.OdinInspector;
 using UnityEngine;
-using UnityEngine.EventSystems;
 using BaXoai;
 using KinematicCharacterController;
 
@@ -12,83 +11,92 @@ namespace Game
         public VariableJoystick moveJoystick;
         public VariableJoystick lookJoystick;
 
+        [OnValueChanged(nameof(OnControlModeChanged))]
         public bool isMobileController = false;
 
-        private const string MouseXInput = "Mouse X";
-        private const string MouseYInput = "Mouse Y";
-        private const string MouseScrollInput = "Mouse ScrollWheel";
         private const string HorizontalInput = "Horizontal";
         private const string VerticalInput = "Vertical";
 
         private KinematicCharacterMotor motor;
+        [SerializeField] private WeaponHolder weaponHolder;
+
         private void Start()
         {
-            //Cursor.lockState = CursorLockMode.Locked;
+            if (characterControl == null)
+                characterControl = GetComponentInChildren<CharacterControl>(true);
 
-            /*CharacterCamera.SetFollowTransform(Character.CameraFollowPoint);
-            CharacterCamera.IgnoredColliders.Clear();
-            CharacterCamera.IgnoredColliders.AddRange(Character.GetComponentsInChildren<Collider>());*/
+            if (characterControl != null && motor == null)
+                motor = characterControl.GetComponent<KinematicCharacterMotor>();
 
-            if (!motor) motor = characterControl.GetComponent<KinematicCharacterMotor>();
+            if (weaponHolder == null)
+                weaponHolder = GetComponentInChildren<WeaponHolder>(true);
+
+            ApplyControlMode();
         }
 
         private void Update()
         {
+            HandleMouseLookControl();
             HandleCharacterInput();
+            HandleWeaponInput();
         }
 
         private void LateUpdate()
         {
-            // Handle rotating the camera along with physics movers
-            /*if (CharacterCamera.RotateWithPhysicsMover && Character.Motor.AttachedRigidbody != null)
-            {
-                CharacterCamera.PlanarDirection = Character.Motor.AttachedRigidbody.GetComponent<PhysicsMover>().RotationDeltaFromInterpolation * CharacterCamera.PlanarDirection;
-                CharacterCamera.PlanarDirection = Vector3.ProjectOnPlane(CharacterCamera.PlanarDirection, Character.Motor.CharacterUp).normalized;
-            }*/
-
             HandleCameraInput();
         }
 
         private void HandleCameraInput()
         {
-            /*// Create the look input vector for the camera
-            float mouseLookAxisUp = Input.GetAxisRaw(MouseYInput);
-            float mouseLookAxisRight = Input.GetAxisRaw(MouseXInput);
-            Vector3 lookInputVector = new Vector3(mouseLookAxisRight, mouseLookAxisUp, 0f);
+        }
 
-            // Prevent moving the camera while the cursor isn't locked
-            if (Cursor.lockState != CursorLockMode.Locked)
+        private void OnControlModeChanged()
+        {
+            ApplyControlMode();
+        }
+
+        private void ApplyControlMode()
+        {
+            if (moveJoystick != null)
+                moveJoystick.gameObject.SetActive(isMobileController);
+
+            if (lookJoystick != null)
+                lookJoystick.gameObject.SetActive(isMobileController);
+
+            if (characterControl != null)
             {
-                lookInputVector = Vector3.zero;
+                if (isMobileController)
+                {
+                    characterControl.AlwaysLookAtMouse = false;
+                    characterControl.OrientationMethod = OrientationMethod.TowardsJoystick;
+                }
+                else
+                {
+                    characterControl.OrientationMethod = OrientationMethod.TowardsMouse;
+                }
             }
+        }
 
-            // Input for zooming the camera (disabled in WebGL because it can cause problems)
-            float scrollInput = -Input.GetAxis(MouseScrollInput);
-#if UNITY_WEBGL
-            scrollInput = 0f;
-#endif
+        private void HandleMouseLookControl()
+        {
+            if (isMobileController || characterControl == null)
+                return;
 
-            // Apply inputs to the camera
-            CharacterCamera.UpdateWithInput(Time.deltaTime, scrollInput, lookInputVector);
-
-            // Handle toggling zoom level
-            if (Input.GetMouseButtonDown(1))
-            {
-                CharacterCamera.TargetDistance = (CharacterCamera.TargetDistance == 0f) ? CharacterCamera.DefaultDistance : 0f;
-            }*/
+            characterControl.AlwaysLookAtMouse = Input.GetMouseButton(0);
         }
 
         private void HandleCharacterInput()
         {
+            if (characterControl == null)
+                return;
+
             PlayerCharacterInputs characterInputs = new PlayerCharacterInputs();
 
             if (!isMobileController)
             {
-                // --- PC / Keyboard ---
                 characterInputs.MoveAxisForward = Input.GetAxisRaw(VerticalInput);
                 characterInputs.MoveAxisRight = Input.GetAxisRaw(HorizontalInput);
 
-                characterInputs.JumpDown = Input.GetKeyDown(KeyCode.Space);
                 characterInputs.CrouchDown = Input.GetKeyDown(KeyCode.C);
                 characterInputs.CrouchUp = Input.GetKeyUp(KeyCode.C);
 
@@ -96,57 +104,82 @@ namespace Game
             }
             else
             {
-                // --- Mobile / Joystick ---
-                if (moveJoystick != null)
-                {
-                    // Joystick: X = ngang, Y = dọc
-                    characterInputs.MoveAxisForward = moveJoystick.Vertical;
-                    characterInputs.MoveAxisRight = moveJoystick.Horizontal;
-                }
-                else
-                {
-                    characterInputs.MoveAxisForward = 0f;
-                    characterInputs.MoveAxisRight = 0f;
-                }
+                characterInputs.MoveAxisForward = moveJoystick != null ? moveJoystick.Vertical : 0f;
+                characterInputs.MoveAxisRight = moveJoystick != null ? moveJoystick.Horizontal : 0f;
 
-                if (lookJoystick != null)
-                {
-                    characterInputs.LookJoystick = new Vector2(lookJoystick.Horizontal, lookJoystick.Vertical);
-                    // hoặc: characterInputs.LookJoystick = lookJoystick.Direction;
-                }
-                else
-                {
-                    characterInputs.LookJoystick = Vector2.zero;
-                }
+                characterInputs.LookJoystick = lookJoystick != null
+                    ? new Vector2(lookJoystick.Horizontal, lookJoystick.Vertical)
+                    : Vector2.zero;
 
-                // Jump, crouch sẽ do UI button gọi riêng (OnClick) nếu cần
-                characterInputs.JumpDown = false;
                 characterInputs.CrouchDown = false;
                 characterInputs.CrouchUp = false;
             }
 
-            // Camera rotation cho CharacterControl (dùng để tính cameraPlanarDirection)
-            Camera cam = (characterControl != null && characterControl.ViewCamera != null)
+            Camera cam = (characterControl.ViewCamera != null)
                 ? characterControl.ViewCamera
                 : Camera.main;
 
-            if (cam != null)
-            {
-                characterInputs.CameraRotation = cam.transform.rotation;
-            }
-            else
-            {
-                characterInputs.CameraRotation = Quaternion.identity;
-            }
+            characterInputs.CameraRotation = cam != null ? cam.transform.rotation : Quaternion.identity;
 
-            // Apply inputs to character
             characterControl.SetInputs(ref characterInputs);
+        }
+
+        private void HandleWeaponInput()
+        {
+            if (weaponHolder == null)
+                return;
+
+            if (!isMobileController)
+            {
+                bool fireHeld = Input.GetMouseButton(0);
+                weaponHolder.SetFireInput(fireHeld);
+
+                if (Input.GetKeyDown(KeyCode.R))
+                    weaponHolder.Reload();
+
+                if (Input.GetKeyDown(KeyCode.Q))
+                    weaponHolder.PreviousWeapon();
+
+                if (Input.GetKeyDown(KeyCode.E))
+                    weaponHolder.NextWeapon();
+            }
         }
 
         [Button]
         public void ActiveLookMouse(bool active)
         {
-            characterControl.AlwaysLookAtMouse = active;
+            if (characterControl != null)
+                characterControl.AlwaysLookAtMouse = active;
+        }
+
+        public void Mobile_FireDown()
+        {
+            if (!isMobileController || weaponHolder == null) return;
+            weaponHolder.SetFireInput(true);
+        }
+
+        public void Mobile_FireUp()
+        {
+            if (!isMobileController || weaponHolder == null) return;
+            weaponHolder.SetFireInput(false);
+        }
+
+        public void Mobile_Reload()
+        {
+            if (!isMobileController || weaponHolder == null) return;
+            weaponHolder.Reload();
+        }
+
+        public void Mobile_NextWeapon()
+        {
+            if (!isMobileController || weaponHolder == null) return;
+            weaponHolder.NextWeapon();
+        }
+
+        public void Mobile_PreviousWeapon()
+        {
+            if (!isMobileController || weaponHolder == null) return;
+            weaponHolder.PreviousWeapon();
         }
     }
 }
